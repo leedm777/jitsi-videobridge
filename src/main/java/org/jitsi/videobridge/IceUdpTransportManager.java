@@ -117,6 +117,19 @@ public class IceUdpTransportManager
         = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
 
     /**
+     * Override the default nomination strategy. Valid values are:
+     * <ul>
+     *   <li>NONE</li>
+     *   <li>NOMINATE_FIRST_VALID</li>
+     *   <li>NOMINATE_HIGHEST_PRIO</li>
+     *   <li>NOMINATE_FIRST_HOST_OR_REFLEXIVE_VALID</li>
+     *   <li>NOMINATE_BEST_RTT</li>
+     * </ul>
+     */
+    private static final String NOMINATION_STRATEGY
+        = "org.jitsi.videobridge.NOMINATION_STRATEGY";
+
+    /**
      * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
      */
     private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
@@ -311,8 +324,28 @@ public class IceUdpTransportManager
 
         dtlsControl = createDtlsControl();
 
+        ConfigurationService cfg
+            = ServiceUtils.getService(
+                getBundleContext(),
+                ConfigurationService.class);
+
         iceAgent = createIceAgent(controlling, iceStreamName, rtcpmux);
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
+
+        if (cfg != null) {
+            String nominationStrategy = cfg.getString(NOMINATION_STRATEGY);
+
+            if (nominationStrategy != null) {
+                try {
+                    NominationStrategy ns = NominationStrategy.valueOf(nominationStrategy);
+                    iceAgent.setNominationStrategy(ns);
+                    logd("Using nomination strategy " + ns);
+                } catch (IllegalArgumentException e) {
+                    logger.error("Unknown nomination strategy " + nominationStrategy);
+                }
+            }
+        }
+
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
