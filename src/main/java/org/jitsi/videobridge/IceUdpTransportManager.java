@@ -61,6 +61,14 @@ public class IceUdpTransportManager
         = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
 
     /**
+     * If set, forces ICE tiebreaker to a specific value. Useful for
+     * debugging tiebreaker logic. This is a UNIT64 on the wire, so
+     * negative values are greater than non-negative values.
+     */
+    private static final String FORCE_TIEBREAKER
+        = "org.jitsi.videobridge.FORCE_TIEBREAKER";
+
+    /**
      * The name of the property which controls the port number used for
      * <tt>SinglePortUdpHarvester</tt>s.
      */
@@ -697,11 +705,19 @@ public class IceUdpTransportManager
                                  boolean rtcpmux)
             throws IOException
     {
+        ConfigurationService cfg
+            = ServiceUtils.getService(
+                    getBundleContext(),
+                    ConfigurationService.class);
         NetworkAddressManagerService nams
             = ServiceUtils.getService(
                     getBundleContext(),
                     NetworkAddressManagerService.class);
         Agent iceAgent = nams.createIceAgent();
+
+        if (cfg != null && cfg.getProperty(FORCE_TIEBREAKER) != null) {
+            iceAgent.setTieBreaker(cfg.getLong(FORCE_TIEBREAKER, -1));
+        }
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
